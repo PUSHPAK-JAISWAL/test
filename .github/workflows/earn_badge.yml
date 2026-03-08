@@ -1,0 +1,51 @@
+name: Earn GitHub Achievements
+on:
+  workflow_dispatch: # Allows you to run it manually with a button click
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create Co-Authored PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Change this number to 10 for Bronze or 48 for Gold Pair Extraordinaire
+          ITERATIONS=48 
+
+          for i in $(seq 1 $ITERATIONS)
+          do
+            BRANCH="badge-run-$i-$(date +%s)"
+            git checkout -b $BRANCH
+            
+            echo "Automated contribution $i" >> progress.txt
+            git add progress.txt
+            
+            # This triggers Pair Extraordinaire
+            git commit -m "Co-authored commit $i
+            
+            Co-authored-by: GitHub Bot <noreply@github.com>"
+            
+            git push origin $BRANCH
+            
+            # Create and Merge PR using GitHub CLI
+            gh pr create --title "Achievement PR $i" --body "Automated PR for badges" --base main --head $BRANCH
+            gh pr merge --merge --delete-branch
+            
+            git checkout main
+            git pull origin main
+          done
