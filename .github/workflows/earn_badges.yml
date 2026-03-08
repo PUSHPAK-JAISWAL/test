@@ -1,6 +1,6 @@
 name: Earn GitHub Achievements
 on:
-  workflow_dispatch: # Allows you to run it manually with a button click
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,35 +17,36 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "PUSHPAK-JAISWAL"
+          git config --global user.email "pushpakmjaiswal@gmail.com"
 
       - name: Create Co-Authored PRs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Change this number to 10 for Bronze or 48 for Gold Pair Extraordinaire
           ITERATIONS=48 
 
           for i in $(seq 1 $ITERATIONS)
           do
-            BRANCH="badge-run-$i-$(date +%s)"
+            BRANCH="pair-run-$i-$(date +%u%H%M%S)"
             git checkout -b $BRANCH
             
-            echo "Automated contribution $i" >> progress.txt
-            git add progress.txt
+            echo "Pairing milestone $i" >> achievement_log.txt
+            git add achievement_log.txt
             
-            # This triggers Pair Extraordinaire
-            git commit -m "Co-authored commit $i
-            
-            Co-authored-by: GitHub Bot <noreply@github.com>"
+            # The blank line before Co-authored-by is mandatory for GitHub to recognize it
+            git commit -m "Collaboration task $i
+
+Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
             
             git push origin $BRANCH
             
-            # Create and Merge PR using GitHub CLI
-            gh pr create --title "Achievement PR $i" --body "Automated PR for badges" --base main --head $BRANCH
+            gh pr create --title "Pairing Achievement PR $i" --body "Automated pairing for badges" --base main --head $BRANCH
+            
             gh pr merge --merge --delete-branch
             
             git checkout main
             git pull origin main
+            
+            sleep 2
           done
