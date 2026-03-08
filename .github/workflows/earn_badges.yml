@@ -34,10 +34,8 @@ jobs:
             echo "Pairing milestone $i" >> achievement_log.txt
             git add achievement_log.txt
             
-            # The blank line before Co-authored-by is mandatory for GitHub to recognize it
-            git commit -m "Collaboration task $i
-
-Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+            # Using multiple -m flags safely formats the message without breaking YAML
+            git commit -m "Collaboration task $i" -m "" -m "Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
             
             git push origin $BRANCH
             
