@@ -1,6 +1,8 @@
 name: Earn GitHub Achievements
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Keep this so you can test it manually
+  schedule:
+    - cron: '0 * * * *' # This tells GitHub to run it at minute 0 of every hour
 
 jobs:
   build:
@@ -24,27 +26,32 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ITERATIONS=48 
-
-          for i in $(seq 1 $ITERATIONS)
-          do
-            BRANCH="pair-run-$i-$(date +%u%H%M%S)"
-            git checkout -b $BRANCH
-            
-            echo "Pairing milestone $i" >> achievement_log.txt
-            git add achievement_log.txt
-            
-            # Using multiple -m flags safely formats the message without breaking YAML
-            git commit -m "Collaboration task $i" -m "" -m "Co-authored-by: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
-            
-            git push origin $BRANCH
-            
-            gh pr create --title "Pairing Achievement PR $i" --body "Automated pairing for badges" --base main --head $BRANCH
-            
-            gh pr merge --merge --delete-branch
-            
-            git checkout main
-            git pull origin main
-            
-            sleep 2
-          done
+          # 1. Fetch a random user from GitHub's API
+          # We pick a random ID between 1 and 50,000,000 to ensure we hit an active account
+          RAND_ID=$((1 + $RANDOM % 50000000))
+          USER_DATA=$(gh api /users?since=$RAND_ID | jq -c '.[0]')
+          
+          # 2. Extract their exact username and ID
+          COAUTHOR_NAME=$(echo $USER_DATA | jq -r '.login')
+          COAUTHOR_ID=$(echo $USER_DATA | jq -r '.id')
+          
+          # 3. Construct the official GitHub no-reply email format for that specific user
+          COAUTHOR_EMAIL="${COAUTHOR_ID}+${COAUTHOR_NAME}@users.noreply.github.com"
+          
+          echo "Pairing with random user: $COAUTHOR_NAME"
+          
+          # 4. Create the branch and commit
+          BRANCH="pair-cron-$(date +%s)"
+          git checkout -b $BRANCH
+          
+          echo "Cron pairing milestone $(date)" >> achievement_log.txt
+          git add achievement_log.txt
+          
+          # Safely apply the random user as the Co-author
+          git commit -m "Hourly collaboration task" -m "" -m "Co-authored-by: $COAUTHOR_NAME <$COAUTHOR_EMAIL>"
+          
+          git push origin $BRANCH
+          
+          # 5. Create and Merge the PR
+          gh pr create --title "Pairing Achievement PR ($COAUTHOR_NAME)" --body "Automated pairing via Cron" --base main --head $BRANCH
+          gh pr merge --merge --delete-branch
