@@ -1,5 +1,6 @@
 name: Earn GitHub Achievements
 on:
+  workflow_dispatch: # Use the button to test it RIGHT NOW
   schedule:
     - cron: '0 * * * *' # Runs at minute 0 of every hour
 
@@ -23,18 +24,21 @@ jobs:
           # 1. Get a recently active user from GitHub's public events timeline
           echo "Fetching recently active developer..."
           EVENT_DATA=$(gh api /events | jq -c '[.[] | select(.type=="PushEvent")][0]')
-          R_LOGIN=$(echo $EVENT_DATA | jq -r '.actor.login')
-          R_ID=$(echo $EVENT_DATA | jq -r '.actor.id')
+          R_LOGIN=$(echo "$EVENT_DATA" | jq -r '.actor.login // "github-actions"')
+          R_ID=$(echo "$EVENT_DATA" | jq -r '.actor.id // "41898282"')
           R_EMAIL="${R_ID}+${R_LOGIN}@users.noreply.github.com"
           
-          # 2. Get a random Wikipedia article
+          # 2. Get a random Wikipedia article SAFELY
           echo "Fetching random Wikipedia content..."
-          WIKI_JSON=$(curl -s "https://en.wikipedia.org/api/rest_v1/page/random/summary")
-          WIKI_TITLE=$(echo $WIKI_JSON | jq -r '.title')
-          WIKI_TEXT=$(echo $WIKI_JSON | jq -r '.extract')
+          # Adding User-Agent to prevent Wikipedia from blocking the curl request
+          WIKI_JSON=$(curl -sL -H "User-Agent: GitHubBadgeAutomator/1.0 (pushpakmjaiswal@gmail.com)" "https://en.wikipedia.org/api/rest_v1/page/random/summary")
+          
+          # Safely extract with fallbacks in case the API returns weird data
+          WIKI_TITLE=$(echo "$WIKI_JSON" | jq -r '.title // "Automated pairing test"')
+          WIKI_TEXT=$(echo "$WIKI_JSON" | jq -r '.extract // "This is fallback text to ensure the commit never fails."')
           
           # Clean the title for the filename
-          SAFE_TITLE=$(echo "$WIKI_TITLE" | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]')
+          SAFE_TITLE=$(echo "$WIKI_TITLE" | tr -dc '[:alnum:]\n\r' | tr '[:upper:]' '[:lower:]' | sed 's/^$/random_file/')
           FILE_NAME="wiki_${SAFE_TITLE}.txt"
           
           # Split the text in half
