@@ -1,45 +1,67 @@
-name: Package Install Test
+name: Randomized Package Test
 
 on:
-  # Manual trigger button in GitHub Actions UI
   workflow_dispatch:
 
-  # Runs automatically every hour
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 * * * *" # every hour
 
 jobs:
-  test-install:
+  randomized-test:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18, 20, 22,24]
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 20
 
-      - name: Create Temporary Project
+      - name: Decide Random Execution
+        id: random_check
+        run: |
+          NUMBER=$((RANDOM % 100))
+
+          echo "Random number: $NUMBER"
+
+          # 50% chance to continue
+          if [ "$NUMBER" -lt 50 ]; then
+            echo "run_job=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_job=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip Run
+        if: steps.random_check.outputs.run_job == 'false'
+        run: echo "Skipping this cycle"
+
+      - name: Random Delay
+        if: steps.random_check.outputs.run_job == 'true'
+        run: |
+          DELAY=$((RANDOM % 300))
+          echo "Sleeping for $DELAY seconds"
+          sleep $DELAY
+
+      - name: Create Temp Project
+        if: steps.random_check.outputs.run_job == 'true'
         run: |
           mkdir test-app
           cd test-app
           npm init -y
 
-      - name: Install Package
+      - name: Randomized Install Count
+        if: steps.random_check.outputs.run_job == 'true'
         run: |
           cd test-app
-          npm install your-package-name
 
-      - name: Verify Installation
-        run: |
-          cd test-app
-          npm list
+          COUNT=$(( (RANDOM % 3) + 1 ))
 
-      - name: Done
-        run: echo "Workflow completed successfully"
+          echo "Running $COUNT install tests"
+
+          for i in $(seq 1 $COUNT)
+          do
+            echo "Test run $i"
+
+            rm -rf node_modules package-lock.json
+
+            npm install your-package-name
+          done
