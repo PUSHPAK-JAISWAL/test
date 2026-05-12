@@ -1,0 +1,45 @@
+name: Package Install Test
+
+on:
+  # Manual trigger button in GitHub Actions UI
+  workflow_dispatch:
+
+  # Runs automatically every hour
+  schedule:
+    - cron: "0 * * * *"
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18, 20, 22,24]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Create Temporary Project
+        run: |
+          mkdir test-app
+          cd test-app
+          npm init -y
+
+      - name: Install Package
+        run: |
+          cd test-app
+          npm install your-package-name
+
+      - name: Verify Installation
+        run: |
+          cd test-app
+          npm list
+
+      - name: Done
+        run: echo "Workflow completed successfully"
