@@ -2,15 +2,19 @@ name: Randomized Package Test
 
 on:
   workflow_dispatch:
-
   schedule:
     - cron: "0 * * * *" # every hour
 
 jobs:
   randomized-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to commit and push changes back to the repo
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -20,7 +24,6 @@ jobs:
         id: random_check
         run: |
           NUMBER=$((RANDOM % 100))
-
           echo "Random number: $NUMBER"
 
           # 50% chance to continue
@@ -52,16 +55,27 @@ jobs:
         if: steps.random_check.outputs.run_job == 'true'
         run: |
           cd test-app
-
           COUNT=$(( (RANDOM % 3) + 1 ))
-
           echo "Running $COUNT install tests"
 
           for i in $(seq 1 $COUNT)
           do
             echo "Test run $i"
-
             rm -rf node_modules package-lock.json
-
             npm install create-server-startup
           done
+
+      - name: Keep-Alive Commit
+        if: steps.random_check.outputs.run_job == 'true'
+        run: |
+          # Create or update a keep-alive file with the current timestamp
+          echo "Last active run: $(date -u)" > keep-alive.txt
+
+          # Configure Git using the standard GitHub Actions bot credentials
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage, commit, and push the change
+          git add keep-alive.txt
+          git diff-index --quiet HEAD || git commit -m "chore: automated keep-alive update [skip ci]"
+          git push
